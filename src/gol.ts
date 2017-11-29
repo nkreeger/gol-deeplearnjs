@@ -9,6 +9,5 @@ function generateGolExample(size: number) {
   console.log('world', world.getValues());
 }
 
-
 // Start:
-generateGolExample(3);
+generateGolExample(4);
