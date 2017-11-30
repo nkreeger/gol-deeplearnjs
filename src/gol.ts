@@ -1,4 +1,4 @@
-import {Array2D} from 'deeplearn';
+import {Array2D, NDArrayMathGPU, Session, Graph} from 'deeplearn';
 import { NDArray } from 'deeplearn/dist/math/ndarray';
 
 /**
@@ -69,6 +69,10 @@ function trainModel(size: number) {
   // TODO: target
   // TODO: fully-connect layers
 }
+
+const graph = new Graph();
+const math = new NDArrayMathGPU();
+const session = new Session(graph, math);
 
 // Start:
 trainModel(3);
