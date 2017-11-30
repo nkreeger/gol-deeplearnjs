@@ -17,11 +17,15 @@ function padArray(array: NDArray): Array2D<'int32'> {
 
   let z = 0;
   for (let i = 0; i < shape[0]; i++) {
-    let rangeStart = i * shape[1] + 1;
-    let rangeEnd = i * shape[1] + x2;
+    let rangeStart = -1;
+    let rangeEnd = -1;
+    if (i > 0 && i < shape[0] - 1) {
+      rangeStart = i * shape[1] + 1;
+      rangeEnd = i * shape[1] + x2;
+    }
     for (let j = 0; j < shape[1]; j++) {
       const v = i * shape[0] + j;
-      if (i > 0 && i < shape[0] -1 && v >= rangeStart && v <= rangeEnd) {
+      if (v >= rangeStart && v <= rangeEnd) {
         values[v] = oldValues[z++];
       } else {
         values[v] = 0;
