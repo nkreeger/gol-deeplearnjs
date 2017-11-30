@@ -1,10 +1,26 @@
-import {Array2D, NDArrayMathGPU, Session, Graph} from 'deeplearn';
-import { NDArray } from 'deeplearn/dist/math/ndarray';
+/**
+ * @license
+ * Copyright 2017 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =============================================================================
+ */
+
+import {Array2D, NDArray} from 'deeplearn';
 
 /**
- * 
- * @param array 
- * @param padding 
+ *
+ * @param array
+ * @param padding
  */
 function padArray(array: NDArray): Array2D<'int32'> {
   const x1 = array.shape[0];
@@ -36,43 +52,47 @@ function padArray(array: NDArray): Array2D<'int32'> {
 }
 
 /**
- * 
- * @param size 
+ *
+ * @param size
  */
 function generateGolExample(size: number) {
-  if (size < 3) {
-    new Error('Size must be greater than 2');
-  }
+  // if (size < 3) {
+  //   new Error('Size must be greater than 2');
+  // }
 
-  const world = Array2D.randUniform([size - 2, size -2], 0, 2, 'int32');
+  const world = Array2D.randUniform([size - 2, size - 2], 0, 2, 'int32');
   const worldPadded = padArray(world);
+  console.log('worldPadded', worldPadded);
 }
 
-/**
- * 
- * @param worldNextProbs 
- * @param worldNextTarget 
- */
-function golLoss(worldNextProbs: NDArray, worldNextTarget: NDArray) {
-  // TODO: Calculate loss.
-}
+// /**
+//  *
+//  * @param worldNextProbs
+//  * @param worldNextTarget
+//  */
+// function golLoss(worldNextProbs: NDArray, worldNextTarget: NDArray) {
+//   // TODO: Calculate loss.
+// }
 
 /**
- * 
- * @param size 
+ *
+ * @param size
  */
 function trainModel(size: number) {
   const world = generateGolExample(size);
   const worldNext = generateGolExample(size);
+
+  console.log('world', world);
+  console.log('worldNext', worldNext);
 
   // TODO: input-layer
   // TODO: target
   // TODO: fully-connect layers
 }
 
-const graph = new Graph();
-const math = new NDArrayMathGPU();
-const session = new Session(graph, math);
+// const graph = new Graph();
+// const math = new NDArrayMathGPU();
+// const session = new Session(graph, math);
 
 // Start:
 trainModel(3);
