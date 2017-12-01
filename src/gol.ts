@@ -19,11 +19,7 @@ import {Array2D, NDArray, NDArrayMathGPU, Graph, Session} from 'deeplearn';
 import { Tensor } from 'deeplearn/dist/graph/graph';
 import { Scalar } from 'deeplearn/dist/math/ndarray';
 
-/**
- *
- * @param array
- * @param padding
- */
+/** TODO(kreeger): Port this when pad operation is implemented. */
 function padArray(array: NDArray): Array2D<'int32'> {
   const x1 = array.shape[0];
   const x2 = array.shape[1];
@@ -53,42 +49,6 @@ function padArray(array: NDArray): Array2D<'int32'> {
   return Array2D.new(shape as [number, number], values, 'int32');
 }
 
-/**
- *
- * @param size
- */
-function generateGolExample(size: number) {
-  // if (size < 3) {
-  //   new Error('Size must be greater than 2');
-  // }
-
-  const world = Array2D.randUniform([size - 2, size - 2], 0, 2, 'int32');
-  const worldPadded = padArray(world);
-  console.log('worldPadded', worldPadded);
-}
-
-// /**
-//  *
-//  * @param worldNextProbs
-//  * @param worldNextTarget
-//  */
-// function golLoss(worldNextProbs: NDArray, worldNextTarget: NDArray) {
-//   // TODO: Calculate loss.
-// }
-
-/**
- *
- * @param size
- */
-function trainModel(size: number) {
-  const world = generateGolExample(size);
-  const worldNext = generateGolExample(size);
-
-  // TODO: input-layer
-  // TODO: target
-  // TODO: fully-connect layers
-}
-
 async function gol() {
   const graph = new Graph();
 
@@ -103,20 +63,28 @@ async function gol() {
   function generateGolExample(size: number) {
     const world = Array2D.randUniform([size - 2, size - 2], 0, 2, 'int32');
     const worldPadded = padArray(world);
+
+    // TODO - count neighbors
+    // TODO - cell survives
+    // TODO - cell rebirths
+    // TODO - world next
+  }
+
+  function trainModel(size: number) {
   }
 
   await math.scope(async (keep, track) => {
+    // TODO - delete this.
     let result: NDArray = session.eval(y, [{tensor: x, data: track(Scalar.new(4))}]);
-
     console.log('result', result.shape);
     console.log('result.getValues()', result.getValues());
+
+    let losses = [];
+    let steps = [];
+    for (let i = 0; i < 10000; i++) {
+      // TODO run the graph.
+    }
   });
 }
 
-
-// Start:
-trainModel(3);
-trainModel(5);
-
 gol();
-// TODO: Run the graph.

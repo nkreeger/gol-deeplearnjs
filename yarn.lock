@@ -521,7 +521,7 @@ deep-extend@~0.4.0:
 
 deeplearn@../deeplearnjs/deeplearn-0.3.12.tgz:
   version "0.3.12"
-  resolved "../deeplearnjs/deeplearn-0.3.12.tgz#7157731a28a7c7f2dbf2ff325cd5651c8749f118"
+  resolved "../deeplearnjs/deeplearn-0.3.12.tgz#e632b72ef457ea3c131d98bf00a71b03807e7444"
   dependencies:
     seedrandom "~2.4.3"
 
