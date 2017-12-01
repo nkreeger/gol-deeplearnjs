@@ -15,7 +15,9 @@
  * =============================================================================
  */
 
-import {Array2D, NDArray} from 'deeplearn';
+import {Array2D, NDArray, NDArrayMathGPU, Graph, Session} from 'deeplearn';
+import { Tensor } from 'deeplearn/dist/graph/graph';
+import { Scalar } from 'deeplearn/dist/math/ndarray';
 
 /**
  *
@@ -82,20 +84,34 @@ function trainModel(size: number) {
   const world = generateGolExample(size);
   const worldNext = generateGolExample(size);
 
-  console.log('world', world);
-  console.log('worldNext', worldNext);
-
   // TODO: input-layer
   // TODO: target
   // TODO: fully-connect layers
 }
 
-// const graph = new Graph();
-// const math = new NDArrayMathGPU();
-// const session = new Session(graph, math);
+async function gol() {
+  const graph = new Graph();
+
+  const math = new NDArrayMathGPU();
+  const session = new Session(graph, math);
+
+  const x: Tensor = graph.placeholder('x', []);
+  const a: Tensor = graph.variable('a', Scalar.new(Math.random()));
+  const b: Tensor = graph.variable('a', Scalar.new(Math.random()));
+  const y: Tensor = graph.add(a, b);
+
+  await math.scope(async (keep, track) => {
+    let result: NDArray = session.eval(y, [{tensor: x, data: track(Scalar.new(4))}]);
+
+    console.log('result', result.shape);
+    console.log('result.getValues()', result.getValues());
+  });
+}
+
 
 // Start:
 trainModel(3);
 trainModel(5);
 
+gol();
 // TODO: Run the graph.
