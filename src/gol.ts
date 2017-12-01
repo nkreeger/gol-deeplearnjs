@@ -100,6 +100,11 @@ async function gol() {
   const b: Tensor = graph.variable('a', Scalar.new(Math.random()));
   const y: Tensor = graph.add(a, b);
 
+  function generateGolExample(size: number) {
+    const world = Array2D.randUniform([size - 2, size - 2], 0, 2, 'int32');
+    const worldPadded = padArray(world);
+  }
+
   await math.scope(async (keep, track) => {
     let result: NDArray = session.eval(y, [{tensor: x, data: track(Scalar.new(4))}]);
 
