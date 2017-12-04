@@ -95,10 +95,10 @@ async function gol() {
 
     console.log('------------------------');
     testPrint(x, 3);
+
     // console.log('worldPadded', worldPadded.getValues());
     // console.log('x', x.getValues());
 
-    // TODO - count neighbors
     // TODO - cell survives
     // TODO - cell rebirths
     // TODO - world next
