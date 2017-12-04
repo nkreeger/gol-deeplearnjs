@@ -5,7 +5,7 @@
   "license": "MIT",
   "dependencies": {
     "@types/node": "^8.0.53",
-    "deeplearn": "../deeplearnjs/deeplearn-0.3.12.tgz",
+    "deeplearn": "^0.3.13",
     "express": "^4.16.2",
     "webpack": "^3.8.1"
   },
