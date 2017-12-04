@@ -49,6 +49,19 @@ function padArray(array: NDArray): Array2D<'int32'> {
   return Array2D.new(shape as [number, number], values, 'int32');
 }
 
+function testPrint(array: NDArray, size: number) {
+  let t = [];
+  let v = array.getValues();
+  for (let i = 0; i < v.length; i++) {
+    t.push(v[i]);
+    if (t.length == size) {
+      console.log(t);
+      t = [];
+    }
+  }
+  console.log('');
+}
+
 async function gol() {
   const graph = new Graph();
 
@@ -61,8 +74,39 @@ async function gol() {
   const y: Tensor = graph.add(a, b);
 
   function generateGolExample(size: number) {
-    const world = Array2D.randUniform([size - 2, size - 2], 0, 2, 'int32');
+    // const world = Array2D.randUniform([size - 2, size - 2], 0, 2, 'int32');
+    const world = Array2D.new([size - 2, size - 2],
+      [[0,0,0],
+      [1,1,1],
+      [0,0,0]], 'int32');
     const worldPadded = padArray(world);
+
+    // Index doesn't exist - manually add?
+    testPrint(worldPadded, 5);
+
+    testPrint(math.slice2D(worldPadded, [0, 0], [3, 3]), 3);
+    testPrint(math.slice2D(worldPadded, [0, 1], [3, 3]), 3);
+    testPrint(math.slice2D(worldPadded, [0, 2], [3, 3]), 3);
+    testPrint(math.slice2D(worldPadded, [1, 0], [3, 3]), 3);
+    testPrint(math.slice2D(worldPadded, [1, 2], [3, 3]), 3);
+    testPrint(math.slice2D(worldPadded, [2, 0], [3, 3]), 3);
+    testPrint(math.slice2D(worldPadded, [2, 1], [3, 3]), 3);
+    testPrint(math.slice2D(worldPadded, [2, 2], [3, 3]), 3);
+
+    let x = math.add(
+        math.slice2D(worldPadded, [0, 0], [3, 3]),
+        math.slice2D(worldPadded, [0, 1], [3, 3]));
+    x = math.add(x, math.slice2D(worldPadded, [0, 2], [3, 3]));
+    x = math.add(x, math.slice2D(worldPadded, [1, 0], [3, 3]));
+    x = math.add(x, math.slice2D(worldPadded, [1, 2], [3, 3]));
+    x = math.add(x, math.slice2D(worldPadded, [2, 0], [3, 3]));
+    x = math.add(x, math.slice2D(worldPadded, [2, 1], [3, 3]));
+    x = math.add(x, math.slice2D(worldPadded, [2, 2], [3, 3]));
+
+    console.log('------------------------');
+    testPrint(x, 3);
+    // console.log('worldPadded', worldPadded.getValues());
+    // console.log('x', x.getValues());
 
     // TODO - count neighbors
     // TODO - cell survives
@@ -78,6 +122,8 @@ async function gol() {
     let result: NDArray = session.eval(y, [{tensor: x, data: track(Scalar.new(4))}]);
     console.log('result', result.shape);
     console.log('result.getValues()', result.getValues());
+
+    generateGolExample(5);
 
     let losses = [];
     let steps = [];
