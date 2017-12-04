@@ -81,6 +81,12 @@ async function gol() {
       [0,0,0]], 'int32');
     const worldPadded = padArray(world);
 
+    let oneValues = [];
+    for (let i = 0; i < world.size; i++) {
+      oneValues.push(1);
+    }
+    const onesLike = Array2D.new([size - 2, size - 2], oneValues, 'int32');
+
     testPrint(worldPadded, 5);
 
     let x = math.add(
@@ -95,6 +101,19 @@ async function gol() {
 
     console.log('------------------------');
     testPrint(x, 3);
+
+
+    const y = x.getValues();
+    for (let i = 0; i < y.length; i++) {
+      let survives = (y[i] == 2 || y[i] == 3);
+      let rebirths = y[i] == 3;
+
+      // TODO: create ones-like
+      let survivors = survives ? math.slice2D(worldPadded, [1, 1], [3, 3]) : NDArray.zerosLike(world);
+      let worldNext = rebirths ? onesLike : survivors;
+      let worldNextPadded = padArray(worldNext);
+      testPrint(worldNextPadded, 3);
+    }
 
     // console.log('worldPadded', worldPadded.getValues());
     // console.log('x', x.getValues());
