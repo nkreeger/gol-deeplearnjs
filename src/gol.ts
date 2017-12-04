@@ -81,17 +81,7 @@ async function gol() {
       [0,0,0]], 'int32');
     const worldPadded = padArray(world);
 
-    // Index doesn't exist - manually add?
     testPrint(worldPadded, 5);
-
-    testPrint(math.slice2D(worldPadded, [0, 0], [3, 3]), 3);
-    testPrint(math.slice2D(worldPadded, [0, 1], [3, 3]), 3);
-    testPrint(math.slice2D(worldPadded, [0, 2], [3, 3]), 3);
-    testPrint(math.slice2D(worldPadded, [1, 0], [3, 3]), 3);
-    testPrint(math.slice2D(worldPadded, [1, 2], [3, 3]), 3);
-    testPrint(math.slice2D(worldPadded, [2, 0], [3, 3]), 3);
-    testPrint(math.slice2D(worldPadded, [2, 1], [3, 3]), 3);
-    testPrint(math.slice2D(worldPadded, [2, 2], [3, 3]), 3);
 
     let x = math.add(
         math.slice2D(worldPadded, [0, 0], [3, 3]),
