@@ -519,9 +519,9 @@ deep-extend@~0.4.0:
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/deep-extend/-/deep-extend-0.4.2.tgz#48b699c27e334bf89f10892be432f6e4c7d34a7f"
 
-deeplearn@../deeplearnjs/deeplearn-0.3.12.tgz:
-  version "0.3.12"
-  resolved "../deeplearnjs/deeplearn-0.3.12.tgz#e632b72ef457ea3c131d98bf00a71b03807e7444"
+deeplearn@^0.3.13:
+  version "0.3.13"
+  resolved "https://registry.yarnpkg.com/deeplearn/-/deeplearn-0.3.13.tgz#12033ab21581fb277dede662250bd58d86457d44"
   dependencies:
     seedrandom "~2.4.3"
 
