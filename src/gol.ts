@@ -15,9 +15,9 @@
  * =============================================================================
  */
 
-import {Array2D, NDArray, NDArrayMathGPU, Graph, Session} from 'deeplearn';
-import { Tensor } from 'deeplearn/dist/graph/graph';
-import { Scalar } from 'deeplearn/dist/math/ndarray';
+import {Array2D, Graph, NDArray, NDArrayMathGPU, Session} from 'deeplearn';
+import {Tensor} from 'deeplearn/dist/graph/graph';
+import {Scalar} from 'deeplearn/dist/math/ndarray';
 
 /** TODO(kreeger): Port this when pad operation is implemented. */
 function padArray(array: NDArray): Array2D<'int32'> {
@@ -73,43 +73,72 @@ async function gol() {
   const b: Tensor = graph.variable('a', Scalar.new(Math.random()));
   const y: Tensor = graph.add(a, b);
 
+  function countNeighbors(size: number, worldPadded: Array2D): Array2D {
+    let neighborCount = math.add(
+        math.slice2D(worldPadded, [0, 0], [size - 2, size - 2]),
+        math.slice2D(worldPadded, [0, 1], [size - 2, size - 2]));
+    neighborCount = math.add(
+        neighborCount, math.slice2D(worldPadded, [0, 2], [size - 2, size - 2]));
+    neighborCount = math.add(
+        neighborCount, math.slice2D(worldPadded, [1, 0], [size - 2, size - 2]));
+    neighborCount = math.add(
+        neighborCount, math.slice2D(worldPadded, [1, 2], [size - 2, size - 2]));
+    neighborCount = math.add(
+        neighborCount, math.slice2D(worldPadded, [2, 0], [size - 2, size - 2]));
+    neighborCount = math.add(
+        neighborCount, math.slice2D(worldPadded, [2, 1], [size - 2, size - 2]));
+    neighborCount = math.add(
+        neighborCount, math.slice2D(worldPadded, [2, 2], [size - 2, size - 2]));
+    return neighborCount as Array2D;
+  }
+
+  function cellSurvives(size: number, numNeigbors: Array2D): Array2D {
+    const survives = Array2D.zeros([size - 2, size - 2], 'bool');
+    //
+    // TODO(kreeger): write me.
+    //
+    return survives;
+  }
+
+  function cellRebirths(size: number, numNeigbors: Array2D): Array2D {
+    const rebirths = Array2D.zeros([size - 2, size - 2], 'bool');
+    //
+    // TODO(kreeger): write me.
+    //
+    return rebirths;
+  }
+
   function generateGolExample(size: number) {
     // const world = Array2D.randUniform([size - 2, size - 2], 0, 2, 'int32');
-    const world = Array2D.new([size - 2, size - 2],
-      [[0,0,0],
-      [1,1,1],
-      [0,0,0]], 'int32');
+    const world = Array2D.new(
+        [size - 2, size - 2], [[0, 0, 0], [1, 1, 1], [0, 0, 0]], 'int32');
     const worldPadded = padArray(world);
+    console.log('world padded ------------------------');
+    testPrint(worldPadded, size);
 
-    testPrint(worldPadded, 5);
+    let numNeighbors = countNeighbors(size, worldPadded);
+    console.log('num neighbors ------------------------');
+    testPrint(numNeighbors, size - 2);
 
-    let x = math.add(
-        math.slice2D(worldPadded, [0, 0], [3, 3]),
-        math.slice2D(worldPadded, [0, 1], [3, 3]));
-    x = math.add(x, math.slice2D(worldPadded, [0, 2], [3, 3]));
-    x = math.add(x, math.slice2D(worldPadded, [1, 0], [3, 3]));
-    x = math.add(x, math.slice2D(worldPadded, [1, 2], [3, 3]));
-    x = math.add(x, math.slice2D(worldPadded, [2, 0], [3, 3]));
-    x = math.add(x, math.slice2D(worldPadded, [2, 1], [3, 3]));
-    x = math.add(x, math.slice2D(worldPadded, [2, 2], [3, 3]));
+    // Cell survives
+    console.log('cell survives ------------------------');
+    const survives = cellSurvives(size, numNeighbors);
+    testPrint(survives, size - 2);
 
-    console.log('------------------------');
-    testPrint(x, 3);
+    // Cell rebirths
+    console.log('cell rebirths ------------------------');
+    const rebirths = cellRebirths(size, numNeighbors);
+    testPrint(rebirths, size - 2);
 
-    // console.log('worldPadded', worldPadded.getValues());
-    // console.log('x', x.getValues());
-
-    // TODO - cell survives
-    // TODO - cell rebirths
     // TODO - world next
   }
 
-  function trainModel(size: number) {
-  }
+  function trainModel(size: number) {}
 
   await math.scope(async (keep, track) => {
     // TODO - delete this.
-    let result: NDArray = session.eval(y, [{tensor: x, data: track(Scalar.new(4))}]);
+    let result: NDArray =
+        session.eval(y, [{tensor: x, data: track(Scalar.new(4))}]);
     console.log('result', result.shape);
     console.log('result.getValues()', result.getValues());
 
