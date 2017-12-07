@@ -15,12 +15,14 @@
  * =============================================================================
  */
 
-import {Array2D, Graph, NDArray, NDArrayMathGPU, Session} from 'deeplearn';
+import {Array2D, Graph, NDArray, NDArrayMathGPU, Session, SGDOptimizer} from 'deeplearn';
 import {Tensor} from 'deeplearn/dist/graph/graph';
 import {Scalar} from 'deeplearn/dist/math/ndarray';
 import { NDArrayMath } from 'deeplearn/dist/math/math';
-import { FeedEntry } from 'deeplearn/dist/graph/session';
+import { FeedEntry, CostReduction } from 'deeplearn/dist/graph/session';
 import { Server } from 'http';
+import { expectArrayInMeanStdRange } from 'deeplearn/dist/test_util';
+import { InCPUMemoryShuffledInputProviderBuilder } from 'deeplearn/dist/data/input_provider';
 
 /* Test-only method for logging worlds. */
 function testPrint(array: NDArray, size: number) {
@@ -42,7 +44,11 @@ function testPrint(array: NDArray, size: number) {
 class GameOfLife {
   session: Session;
   math: NDArrayMath = new NDArrayMathGPU();
-  batchSize: 300;
+  batchSize = 100;
+
+  // An optimizer with a certain initial learning rate. Used for training.
+  initialLearningRate = 0.042;
+  optimizer: SGDOptimizer;
 
   inputTensor: Tensor;
   targetTensor: Tensor;
@@ -50,12 +56,14 @@ class GameOfLife {
   predictionTensor: Tensor;
 
   size: number;
+  step = 0;
 
   // Maps tensors to InputProviders
   feedEntries: FeedEntry[];
 
   constructor(size: number) {
     this.size = size;
+    this.optimizer = new SGDOptimizer(this.initialLearningRate);
   }
 
   setupSession(): void {
@@ -68,22 +76,71 @@ class GameOfLife {
     let hiddenLayer = GameOfLife.createFullyConnectedLayer(graph, this.inputTensor, 0, size);
     hiddenLayer = GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 1, size);
     // This needs activiation function sigmoid?
-    hiddenLayer = GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 2, size);
+    this.predictionTensor = GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 2, size);
 
-    // TODO(kreeger): Left off right here.
-    // tf.contrib.losses.log_loss()
-    // this.predictionTensor = GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 3, )
     this.costTensor = graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
-
-
     this.session = new Session(graph, this.math);
 
     // Generate the training data:
     this.generateTrainingData();
   }
 
+  public train1Batch(shouldFetchCost: boolean): number {
+    // Every 42 steps, lower the learning rate by 15%.
+    const learningRate =
+        this.initialLearningRate * Math.pow(0.95, Math.floor(this.step++ / 42));
+    this.optimizer.setLearningRate(learningRate);
+
+    let costValue = -1;
+    this.math.scope(() => {
+      const cost = this.session.train(
+        this.costTensor, this.feedEntries, this.batchSize, this.optimizer,
+        shouldFetchCost ? CostReduction.MEAN : CostReduction.NONE);
+
+        if (!shouldFetchCost) {
+          return;
+        }
+        costValue = cost.get();
+    });
+    return costValue;
+  }
+
+  predict(world: NDArray): Array2D {
+    let values = null;
+    this.math.scope((keep, track) => {
+      const mapping = [{
+        tensor: this.inputTensor,
+        data: world.reshape([this.size * this.size])
+      }]
+
+      const evalOutput = this.session.eval(this.predictionTensor, mapping);
+      values = evalOutput.getValues();
+    });
+    return Array2D.new([this.size, this.size], values);
+  }
+
   private generateTrainingData(): void {
-    // TODO(kreeger): Simply pipe the information below into the correct Feed.
+    const batchSize = this.batchSize;
+    const size = this.size;
+
+    this.math.scope(() => {
+      const inputs = [];
+      const outputs = [];
+      for (let i = 0; i < batchSize; i++) {
+        const example = this.generateGolExample(size);
+        inputs.push(example[0].reshape([this.size * this.size]));
+        outputs.push(example[1].reshape([this.size * this.size]));
+      }
+
+      // TODO(kreeger): Don't really need to shuffle these.
+      const inputProviderBuilder = new InCPUMemoryShuffledInputProviderBuilder([inputs, outputs]);
+      const [inputProvider, targetProvider] = inputProviderBuilder.getInputProviders();
+     
+      this.feedEntries = [
+        {tensor: this.inputTensor, data: inputProvider},
+        {tensor: this.targetTensor, data: targetProvider}
+      ];
+    });
   }
 
   public generateGolExample(size: number): [NDArray, NDArray] {
@@ -171,11 +228,18 @@ class GameOfLife {
   }
 }
 
+
 const game = new GameOfLife(5);
 const worlds = game.generateGolExample(5);
+game.setupSession();
+for (let i = 0; i < 200; i++) {
+  let fetchCost = i % 5 == 0;
+  let cost = game.train1Batch(fetchCost);
+  if (fetchCost) {
+    console.log(i + ': ' + cost);
+  }
+}
 testPrint(worlds[0], 5);
 testPrint(worlds[1], 5);
-
-// game.setupSession();
-
-// TODO - start?
+console.log('-----------------------------');
+testPrint(game.predict(worlds[0]), 5);
