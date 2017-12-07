@@ -86,28 +86,29 @@ class GameOfLife {
     // TODO(kreeger): Simply pipe the information below into the correct Feed.
   }
 
-  private generateGolExample(size: number) {
-    // TODO(kreeger): Optimize this until vectorization is available.
+  public generateGolExample(size: number): [NDArray, NDArray] {
     const world = Array2D.randUniform([size - 2, size - 2], 0, 2, 'int32');
     const worldPadded = GameOfLife.padArray(world);
     const numNeighbors = this.countNeighbors(size, worldPadded).getValues();
-
+    const worldValues = world.getValues();
     const nextWorldValues = [];
     for (let i = 0; i < numNeighbors.length; i++) {
       const value = numNeighbors[i];
-      if (value == 2) {
-        // Survives
-      } else if (value == 3) {
-        // Rebirths.
+      let nextVal = 0;
+      if (value == 3) {
+        // Cell rebirths
+        nextVal = 1;
+      } else if (value == 2) {
+        // Cell survives
+        nextVal = worldValues[i];
       } else {
-        // Dies.
+        // Cell dies
+        nextVal = 0;
       }
+      nextWorldValues.push(nextVal);
     }
-
-    // const survivors = GameOfLife.cellSurvivors(world, numNeighbors);
-    // const rebirths = GameOfLife.cellRebirths(world, numNeighbors);
-    // const worldNext = GameOfLife.createNextWorld(world, survivors, rebirths);
-    // return [worldPadded, GameOfLife.padArray(worldNext)]; 
+    const worldNext = Array2D.new(world.shape, nextWorldValues, 'int32');
+    return [worldPadded, GameOfLife.padArray(worldNext)]; 
   }
 
   /** Counts total sum of neighbors for a given world. */
@@ -128,43 +129,6 @@ class GameOfLife {
     neighborCount = this.math.add(
         neighborCount, this.math.slice2D(worldPadded, [2, 2], [size - 2, size - 2]));
     return neighborCount as Array2D;
-  }
-
-  /** Generates cell survivors matrix. */
-  private static cellSurvivors(world: Array2D, numNeigbors: Array2D): Array2D {
-    const survives = [];
-    let worldValues = world.getValues();
-    let numNeigborValues = numNeigbors.getValues();
-    for (let i = 0; i < numNeigborValues.length; i++) {
-      const value = numNeigborValues[i];
-      value == 2 || value == 3 ? survives.push(worldValues[i]) : survives.push(0);
-    }
-    return Array2D.new(world.shape, survives, 'bool');
-  }
-
-  /** Generates an array if the cell should rebirth. */
-  private static cellRebirths(world: Array2D, numNeigbors: Array2D): Array2D {
-    const rebirths = []
-    let numNeigborValues = numNeigbors.getValues();
-    for (let i = 0; i < numNeigborValues.length; i++) {
-      numNeigborValues[i] == 3 ? rebirths.push(1) : rebirths.push(0);
-    }
-    return Array2D.new(world.shape, rebirths, 'bool');
-  }
-
-  /** Generates the next world sequence. */
-  private static createNextWorld(world: Array2D, survives: Array2D, rebirths: Array2D): Array2D {
-    const surviveValues = survives.getValues();
-    const rebirthValues = rebirths.getValues();
-    const nextWorldValues = [];
-    for (let i = 0; i < surviveValues.length; i++) {
-      if (rebirthValues[i]) {
-        nextWorldValues.push(1);
-      } else {
-        nextWorldValues.push(surviveValues[i]);
-      }
-    }
-    return Array2D.new(world.shape, nextWorldValues, 'int32');
   }
 
   /* Helper method to pad an array until the op is ready. */
@@ -208,6 +172,10 @@ class GameOfLife {
 }
 
 const game = new GameOfLife(5);
-game.setupSession();
+const worlds = game.generateGolExample(5);
+testPrint(worlds[0], 5);
+testPrint(worlds[1], 5);
+
+// game.setupSession();
 
 // TODO - start?
