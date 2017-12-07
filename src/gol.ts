@@ -90,11 +90,24 @@ class GameOfLife {
     // TODO(kreeger): Optimize this until vectorization is available.
     const world = Array2D.randUniform([size - 2, size - 2], 0, 2, 'int32');
     const worldPadded = GameOfLife.padArray(world);
-    const numNeighbors = this.countNeighbors(size, worldPadded);
-    const survivors = GameOfLife.cellSurvivors(world, numNeighbors);
-    const rebirths = GameOfLife.cellRebirths(world, numNeighbors);
-    const worldNext = GameOfLife.createNextWorld(world, survivors, rebirths);
-    return [worldPadded, GameOfLife.padArray(worldNext)]; 
+    const numNeighbors = this.countNeighbors(size, worldPadded).getValues();
+
+    const nextWorldValues = [];
+    for (let i = 0; i < numNeighbors.length; i++) {
+      const value = numNeighbors[i];
+      if (value == 2) {
+        // Survives
+      } else if (value == 3) {
+        // Rebirths.
+      } else {
+        // Dies.
+      }
+    }
+
+    // const survivors = GameOfLife.cellSurvivors(world, numNeighbors);
+    // const rebirths = GameOfLife.cellRebirths(world, numNeighbors);
+    // const worldNext = GameOfLife.createNextWorld(world, survivors, rebirths);
+    // return [worldPadded, GameOfLife.padArray(worldNext)]; 
   }
 
   /** Counts total sum of neighbors for a given world. */
