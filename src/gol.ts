@@ -47,11 +47,12 @@ function testPrint(array: NDArray, size: number) {
 class GameOfLife {
   session: Session;
   math: NDArrayMath = new NDArrayMathGPU();
-  batchSize = 100;
+  batchSize = 1;
 
   // An optimizer with a certain initial learning rate. Used for training.
   initialLearningRate = 0.042;
   optimizer: SGDOptimizer;
+  // optimizer: AdagradOptimizer;
 
   inputTensor: Tensor;
   targetTensor: Tensor;
@@ -66,6 +67,7 @@ class GameOfLife {
 
   constructor(size: number) {
     this.size = size;
+    // this.optimizer = new AdagradOptimizer(0.01);
     this.optimizer = new SGDOptimizer(this.initialLearningRate);
   }
 
@@ -81,19 +83,17 @@ class GameOfLife {
     hiddenLayer =
         GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 1, size);
     this.predictionTensor =
-        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 3, size);
+        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 2, size);
         // GameOfLife.createFullyConnectedLayerSigmoid(graph, hiddenLayer, 2, size);
 
     // This is wrong - need to use something that is not mean-squared...
     this.costTensor =
         graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
     this.session = new Session(graph, this.math);
-
-    // Generate the training data:
-    this.generateTrainingData();
   }
 
   public train1Batch(shouldFetchCost: boolean): number {
+    this.generateTrainingData();
     // Every 42 steps, lower the learning rate by 15%.
     const learningRate =
         this.initialLearningRate * Math.pow(0.85, Math.floor(this.step++ / 42));
@@ -254,16 +254,31 @@ class GameOfLife {
 
 
 const game = new GameOfLife(5);
-const worlds = game.generateGolExample(5);
+let worlds = game.generateGolExample(5);
 game.setupSession();
-for (let i = 0; i < 1000; i++) {
+for (let i = 0; i < 10000; i++) {
   let fetchCost = i % 300 == 0;
   let cost = game.train1Batch(fetchCost);
   if (fetchCost) {
     console.log(i + ': ' + cost);
   }
 }
+console.log('Game Before:')
 testPrint(worlds[0], 5);
+console.log('Game After:')
 testPrint(worlds[1], 5);
-console.log('-----------------------------');
+console.log('Prediction:')
 testPrint(game.predict(worlds[0]), 5);
+console.log('-----------------------------');
+console.log('-----------------------------');
+
+for (let i = 0; i < 5; i++) {
+  worlds = game.generateGolExample(5);
+  console.log('Game Before:')
+  testPrint(worlds[0], 5);
+  console.log('Game After:')
+  testPrint(worlds[1], 5);
+  console.log('Prediction:')
+  testPrint(game.predict(worlds[0]), 5);
+  console.log('-----------------------------');
+}
