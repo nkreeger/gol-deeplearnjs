@@ -18,13 +18,13 @@
 import {Array2D, Graph, NDArray, NDArrayMathGPU, Session, SGDOptimizer} from 'deeplearn';
 import {InCPUMemoryShuffledInputProviderBuilder} from 'deeplearn/dist/data/input_provider';
 import {Tensor} from 'deeplearn/dist/graph/graph';
+import {AdagradOptimizer} from 'deeplearn/dist/graph/optimizers/adagrad_optimizer';
+import {AdamaxOptimizer} from 'deeplearn/dist/graph/optimizers/adamax_optimizer';
 import {CostReduction, FeedEntry} from 'deeplearn/dist/graph/session';
 import {NDArrayMath} from 'deeplearn/dist/math/math';
 import {Scalar} from 'deeplearn/dist/math/ndarray';
 import {expectArrayInMeanStdRange} from 'deeplearn/dist/test_util';
 import {Server} from 'http';
-import { AdamaxOptimizer } from 'deeplearn/dist/graph/optimizers/adamax_optimizer';
-import { AdagradOptimizer } from 'deeplearn/dist/graph/optimizers/adagrad_optimizer';
 
 /* Test-only method for logging worlds. */
 function testPrint(array: NDArray, size: number) {
@@ -118,7 +118,7 @@ class GameOfLife {
         data: world.reshape([this.size * this.size])
       }]
 
-      const evalOutput = this.session.eval(this.predictionTensor, mapping);
+          const evalOutput = this.session.eval(this.predictionTensor, mapping);
       values = evalOutput.getValues();
     });
     return Array2D.new([this.size, this.size], values);
@@ -239,32 +239,58 @@ class GameOfLife {
 }
 
 
+/* Draws Game Of Life sequences */
+class WorldDisplay {
+  element: Element;
+
+  constructor() {
+    this.element = document.querySelector('.world-display');
+  }
+
+  displayWorld(world: NDArray) {
+    //
+    // TODO(kreeger): left off right here.
+    //
+  }
+}
+
+class TrainDisplay {
+  element: Element;
+
+  constructor() {
+    this.element = document.querySelector('.train-display');
+  }
+}
+
 const game = new GameOfLife(5);
 let worlds = game.generateGolExample(5);
 game.setupSession();
-for (let i = 0; i < 10000; i++) {
-  let fetchCost = i % 300 == 0;
-  let cost = game.train1Batch(fetchCost);
-  if (fetchCost) {
-    console.log(i + ': ' + cost);
-  }
-}
-console.log('Game Before:')
-testPrint(worlds[0], 5);
-console.log('Game After:')
-testPrint(worlds[1], 5);
-console.log('Prediction:')
-testPrint(game.predict(worlds[0]), 5);
-console.log('-----------------------------');
-console.log('-----------------------------');
 
-for (let i = 0; i < 5; i++) {
-  worlds = game.generateGolExample(5);
-  console.log('Game Before:')
-  testPrint(worlds[0], 5);
-  console.log('Game After:')
-  testPrint(worlds[1], 5);
-  console.log('Prediction:')
-  testPrint(game.predict(worlds[0]), 5);
-  console.log('-----------------------------');
-}
+const trainDisplay = new TrainDisplay();
+
+// for (let i = 0; i < 10000; i++) {
+//   let fetchCost = i % 300 == 0;
+//   let cost = game.train1Batch(fetchCost);
+//   if (fetchCost) {
+//     console.log(i + ': ' + cost);
+//   }
+// }
+// console.log('Game Before:')
+// testPrint(worlds[0], 5);
+// console.log('Game After:')
+// testPrint(worlds[1], 5);
+// console.log('Prediction:')
+// testPrint(game.predict(worlds[0]), 5);
+// console.log('-----------------------------');
+// console.log('-----------------------------');
+
+// for (let i = 0; i < 5; i++) {
+//   worlds = game.generateGolExample(5);
+//   console.log('Game Before:')
+//   testPrint(worlds[0], 5);
+//   console.log('Game After:')
+//   testPrint(worlds[1], 5);
+//   console.log('Prediction:')
+//   testPrint(game.predict(worlds[0]), 5);
+//   console.log('-----------------------------');
+// }
