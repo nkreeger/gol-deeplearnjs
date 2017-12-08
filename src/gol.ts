@@ -56,7 +56,7 @@ class GameOfLife {
     this.optimizer = new SGDOptimizer(this.initialLearningRate);
   }
 
-  setupSession(boardSize: number, initialLearningRate: number): void {
+  setupSession(boardSize: number, initialLearningRate: number, numLayers: number): void {
     this.size = boardSize;
     const graph = new Graph();
     const shape = this.size * this.size;
@@ -64,12 +64,13 @@ class GameOfLife {
     this.inputTensor = graph.placeholder('input', [shape]);
     this.targetTensor = graph.placeholder('target', [shape]);
 
-    let hiddenLayer =
-        GameOfLife.createFullyConnectedLayer(graph, this.inputTensor, 0, shape);
-    hiddenLayer =
-        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 1, shape);
-    this.predictionTensor =
-        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 2, shape);
+    let hiddenLayer: Tensor; 
+    for (let i = 0; i < numLayers; i++) {
+      hiddenLayer = GameOfLife.createFullyConnectedLayer(
+          graph, this.inputTensor, i, shape);
+    }
+
+    this.predictionTensor = hiddenLayer;
 
     this.costTensor =
         graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
@@ -217,7 +218,7 @@ class GameOfLife {
   /* Helper method for creating a fully connected layer. */
   private static createFullyConnectedLayer(
       graph: Graph, inputLayer: Tensor, layerIndex: number,
-      sizeOfThisLayer: number, includeRelu = true, includeBias = true) {
+      sizeOfThisLayer: number, includeRelu = true, includeBias = true): Tensor {
     return graph.layers.dense(
         'fully_connected_' + layerIndex, inputLayer, sizeOfThisLayer,
         includeRelu ? (x) => graph.relu(x) : undefined, includeBias);
@@ -317,13 +318,14 @@ let worldContexts: Array<WorldContext> = [];
 const boardSizeInput = document.getElementById('board-size-input') as HTMLTextAreaElement;
 const trainingSizeInput = document.getElementById('training-size-input') as HTMLTextAreaElement;
 const learningRateInput = document.getElementById('learning-rate-input') as HTMLTextAreaElement;
+const numLayersInput = document.getElementById('num-layers-input') as HTMLTextAreaElement;
 const addSequenceButton = document.querySelector('.add-sequence-button');
 const trainButton = document.querySelector('.train-button');
 const predictButton = document.querySelector('.predict-button');
 const resetButton = document.querySelector('.reset-button');
 
 function getBoardSize() {
-  return parseInt(boardSizeInput.value, 10);
+  return parseInt(boardSizeInput.value);
 }
 
 addSequenceButton.addEventListener('click', () => {
@@ -339,9 +341,10 @@ trainButton.addEventListener('click', () => {
 
   const boardSize = getBoardSize();
   const learningRate = parseFloat(learningRateInput.value);
-  const trainingSize = parseInt(trainingSizeInput.value, 10);
+  const trainingSize = parseInt(trainingSizeInput.value);
+  const numLayers = parseInt(numLayersInput.value);
 
-  game.setupSession(boardSize, learningRate);
+  game.setupSession(boardSize, learningRate, numLayers);
   for (let i = 0; i < trainingSize; i++) {
     let fetchCost = i % 100 == 0;
     let cost = game.train1Batch(fetchCost);
