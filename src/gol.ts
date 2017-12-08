@@ -84,9 +84,7 @@ class GameOfLife {
         GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 1, size);
     this.predictionTensor =
         GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 2, size);
-        // GameOfLife.createFullyConnectedLayerSigmoid(graph, hiddenLayer, 2, size);
 
-    // This is wrong - need to use something that is not mean-squared...
     this.costTensor =
         graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
     this.session = new Session(graph, this.math);
@@ -237,15 +235,6 @@ class GameOfLife {
     return graph.layers.dense(
         'fully_connected_' + layerIndex, inputLayer, sizeOfThisLayer,
         includeRelu ? (x) => graph.relu(x) : undefined, includeBias);
-  }
-
-  /* Helper method for creating a fully connected layer. */
-  private static createFullyConnectedLayerSigmoid(
-      graph: Graph, inputLayer: Tensor, layerIndex: number,
-      sizeOfThisLayer: number, includeBias = true) {
-    return graph.layers.dense(
-        'fully_connected_' + layerIndex, inputLayer, sizeOfThisLayer,
-        (x) => graph.sigmoid(x), includeBias);
   }
 }
 
