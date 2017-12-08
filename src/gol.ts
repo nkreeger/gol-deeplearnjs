@@ -26,20 +26,6 @@ import {Scalar} from 'deeplearn/dist/math/ndarray';
 import {expectArrayInMeanStdRange} from 'deeplearn/dist/test_util';
 import {Server} from 'http';
 
-/* Test-only method for logging worlds. */
-function testPrint(array: NDArray, size: number) {
-  let t = [];
-  let v = array.getValues();
-  for (let i = 0; i < v.length; i++) {
-    t.push(v[i]);
-    if (t.length == size) {
-      console.log(t);
-      t = [];
-    }
-  }
-  console.log('');
-}
-
 /**
  * Main class for running a deep-neural network of training for Game-of-life
  * next sequence.
@@ -65,25 +51,25 @@ class GameOfLife {
   // Maps tensors to InputProviders
   feedEntries: FeedEntry[];
 
-  constructor(size: number) {
-    this.size = size;
+  constructor() {
     // this.optimizer = new AdagradOptimizer(0.01);
     this.optimizer = new SGDOptimizer(this.initialLearningRate);
   }
 
-  setupSession(): void {
+  setupSession(boardSize: number, initialLearningRate: number): void {
+    this.size = boardSize;
     const graph = new Graph();
-    const size = this.size * this.size;
+    const shape = this.size * this.size;
 
-    this.inputTensor = graph.placeholder('input', [size]);
-    this.targetTensor = graph.placeholder('target', [size]);
+    this.inputTensor = graph.placeholder('input', [shape]);
+    this.targetTensor = graph.placeholder('target', [shape]);
 
     let hiddenLayer =
-        GameOfLife.createFullyConnectedLayer(graph, this.inputTensor, 0, size);
+        GameOfLife.createFullyConnectedLayer(graph, this.inputTensor, 0, shape);
     hiddenLayer =
-        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 1, size);
+        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 1, shape);
     this.predictionTensor =
-        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 2, size);
+        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 2, shape);
 
     this.costTensor =
         graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
@@ -318,32 +304,46 @@ class TrainDisplay {
   }
 }
 
-// Setup game + training:
-const game = new GameOfLife(5);
-game.setupSession();
+// Setup game
+const game = new GameOfLife();
 
 // Helper classes for displaying worlds and training data:
 const trainDisplay = new TrainDisplay();
 const worldDisplay = new WorldDisplay();
 
 // List of worlds + display contexts.
-const worldContexts: Array<WorldContext> = [];
+let worldContexts: Array<WorldContext> = [];
 
-// Button handlers:
+const boardSizeInput = document.getElementById('board-size-input') as HTMLTextAreaElement;
+const trainingSizeInput = document.getElementById('training-size-input') as HTMLTextAreaElement;
+const learningRateInput = document.getElementById('learning-rate-input') as HTMLTextAreaElement;
 const addSequenceButton = document.querySelector('.add-sequence-button');
 const trainButton = document.querySelector('.train-button');
 const predictButton = document.querySelector('.predict-button');
+const resetButton = document.querySelector('.reset-button');
+
+function getBoardSize() {
+  return parseInt(boardSizeInput.value, 10);
+}
 
 addSequenceButton.addEventListener('click', () => {
-  worldContexts.push(new WorldContext(game.generateGolExample(5)));
+  worldContexts.push(new WorldContext(game.generateGolExample(getBoardSize())));
 });
 
 trainButton.addEventListener('click', () => {
   trainButton.setAttribute('disabled', 'disabled');
   predictButton.setAttribute('disabled', 'disabled');
+  boardSizeInput.setAttribute('disabled', 'disabled');
+  learningRateInput.setAttribute('disabled', 'disabled');
+  trainingSizeInput.setAttribute('disabled', 'disabled');
 
-  for (let i = 0; i < 10000; i++) {
-    let fetchCost = i % 250 == 0;
+  const boardSize = getBoardSize();
+  const learningRate = parseFloat(learningRateInput.value);
+  const trainingSize = parseInt(trainingSizeInput.value, 10);
+
+  game.setupSession(boardSize, learningRate);
+  for (let i = 0; i < trainingSize; i++) {
+    let fetchCost = i % 100 == 0;
     let cost = game.train1Batch(fetchCost);
     if (fetchCost) {
       trainDisplay.logCost(cost);
@@ -353,10 +353,21 @@ trainButton.addEventListener('click', () => {
 
   trainButton.removeAttribute('disabled');
   predictButton.removeAttribute('disabled');
+  boardSizeInput.removeAttribute('disabled');
+  learningRateInput.removeAttribute('disabled');
+  trainingSizeInput.removeAttribute('disabled');
 });
-
+``
 predictButton.addEventListener('click', () => {
   worldContexts.forEach((worldContext) => {
     worldContext.displayPrediction(game.predict(worldContext.world));
   });
+});
+
+resetButton.addEventListener('click', () => {
+  worldContexts = [];
+  const worldsDisplay = document.querySelector('.worlds-display');
+  while (worldsDisplay.hasChildNodes()) {
+    worldsDisplay.removeChild(worldsDisplay.lastChild);
+  }
 });

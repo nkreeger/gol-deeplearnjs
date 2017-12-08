@@ -32,9 +32,21 @@
         }
     </style>
 
-    <button class="add-sequence-button">Add Sequence</button>
-    <button class="train-button">Train Model</button>
-    <button class="predict-button" disabled="disabled">Predict Sequence</button>
+    <div>
+        Board size: <input type="text" id="board-size-input" value="5">
+        <br>
+        Training size: <input type="text" id="training-size-input" value="10000">
+        <br>
+        Initial Learning Rate: <input type="text" id="learning-rate-input" value="0.042">
+    </div>
+    <br>
+    <div>
+        <button class="add-sequence-button">Add Sequence</button>
+        <button class="train-button">Train Model</button>
+        <button class="predict-button" disabled="disabled">Predict Sequence</button>
+        <button class="reset-button">Reset</button>
+    </div>
+
     <hr>
     <div class="worlds-display"></div>
     <hr>
