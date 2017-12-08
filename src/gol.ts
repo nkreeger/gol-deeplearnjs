@@ -357,7 +357,7 @@ trainButton.addEventListener('click', () => {
   learningRateInput.removeAttribute('disabled');
   trainingSizeInput.removeAttribute('disabled');
 });
-``
+
 predictButton.addEventListener('click', () => {
   worldContexts.forEach((worldContext) => {
     worldContext.displayPrediction(game.predict(worldContext.world));
