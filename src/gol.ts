@@ -241,16 +241,65 @@ class GameOfLife {
 
 /* Draws Game Of Life sequences */
 class WorldDisplay {
-  element: Element;
+  rootElement: Element;
 
   constructor() {
-    this.element = document.querySelector('.world-display');
+    this.rootElement = document.createElement('div');
+    this.rootElement.setAttribute('class', 'world-display');
+    
+    document.querySelector('.worlds-display').appendChild(this.rootElement);
   }
 
-  displayWorld(world: NDArray) {
-    //
-    // TODO(kreeger): left off right here.
-    //
+  displayWorld(world: NDArray, title: string) {
+    let worldElement = document.createElement('div');
+    worldElement.setAttribute('class', 'world');
+
+    let titleElement = document.createElement('div');
+    titleElement.setAttribute('class', 'title');
+    titleElement.innerText = title;
+    worldElement.appendChild(titleElement);
+
+    let boardElement = document.createElement('div');
+    boardElement.setAttribute('class', 'board');
+
+    for (let i = 0; i < world.shape[0]; i++) {
+      let rowElement = document.createElement('div');
+      rowElement.setAttribute('class', 'row');
+
+      for (let j = 0; j < world.shape[1]; j++) {
+        let columnElement = document.createElement('div');
+        columnElement.setAttribute('class', 'column');
+        if (world.get(i, j) == 1) {
+          columnElement.classList.add('alive');
+        } else {
+          columnElement.classList.add('dead');
+        }
+        rowElement.appendChild(columnElement);
+     }
+      boardElement.appendChild(rowElement);
+    }
+
+    worldElement.appendChild(boardElement);
+    this.rootElement.appendChild(worldElement);
+  }
+}
+
+class WorldContext {
+  worldDisplay: WorldDisplay;
+  world: NDArray;
+  worldNext: NDArray;
+
+  constructor(worlds: [NDArray, NDArray]) {
+    this.worldDisplay = new WorldDisplay();
+
+    this.world = worlds[0];
+    this.worldNext = worlds[1];
+    this.worldDisplay.displayWorld(this.world, 'Sequence');
+    this.worldDisplay.displayWorld(this.worldNext, 'Next Sequence');
+  }
+
+  displayPrediction(prediction: NDArray) {
+    this.worldDisplay.displayWorld(prediction, 'Prediction');
   }
 }
 
@@ -260,37 +309,54 @@ class TrainDisplay {
   constructor() {
     this.element = document.querySelector('.train-display');
   }
+
+  logCost(cost: number) {
+    const costElement = document.createElement('div');
+    costElement.setAttribute('class', 'cost');
+    costElement.innerText = '* Cost: ' + cost;
+    this.element.appendChild(costElement);
+  }
 }
 
+// Setup game + training:
 const game = new GameOfLife(5);
-let worlds = game.generateGolExample(5);
 game.setupSession();
 
+// Helper classes for displaying worlds and training data:
 const trainDisplay = new TrainDisplay();
+const worldDisplay = new WorldDisplay();
 
-// for (let i = 0; i < 10000; i++) {
-//   let fetchCost = i % 300 == 0;
-//   let cost = game.train1Batch(fetchCost);
-//   if (fetchCost) {
-//     console.log(i + ': ' + cost);
-//   }
-// }
-// console.log('Game Before:')
-// testPrint(worlds[0], 5);
-// console.log('Game After:')
-// testPrint(worlds[1], 5);
-// console.log('Prediction:')
-// testPrint(game.predict(worlds[0]), 5);
-// console.log('-----------------------------');
-// console.log('-----------------------------');
+// List of worlds + display contexts.
+const worldContexts: Array<WorldContext> = [];
 
-// for (let i = 0; i < 5; i++) {
-//   worlds = game.generateGolExample(5);
-//   console.log('Game Before:')
-//   testPrint(worlds[0], 5);
-//   console.log('Game After:')
-//   testPrint(worlds[1], 5);
-//   console.log('Prediction:')
-//   testPrint(game.predict(worlds[0]), 5);
-//   console.log('-----------------------------');
-// }
+// Button handlers:
+const addSequenceButton = document.querySelector('.add-sequence-button');
+const trainButton = document.querySelector('.train-button');
+const predictButton = document.querySelector('.predict-button');
+
+addSequenceButton.addEventListener('click', () => {
+  worldContexts.push(new WorldContext(game.generateGolExample(5)));
+});
+
+trainButton.addEventListener('click', () => {
+  trainButton.setAttribute('disabled', 'disabled');
+  predictButton.setAttribute('disabled', 'disabled');
+
+  for (let i = 0; i < 10000; i++) {
+    let fetchCost = i % 250 == 0;
+    let cost = game.train1Batch(fetchCost);
+    if (fetchCost) {
+      trainDisplay.logCost(cost);
+      console.log(i + ': ' + cost);
+    }
+  }
+
+  trainButton.removeAttribute('disabled');
+  predictButton.removeAttribute('disabled');
+});
+
+predictButton.addEventListener('click', () => {
+  worldContexts.forEach((worldContext) => {
+    worldContext.displayPrediction(game.predict(worldContext.world));
+  });
+});
