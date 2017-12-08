@@ -105,7 +105,7 @@ class GameOfLife {
         data: world.reshape([this.size * this.size])
       }]
 
-          const evalOutput = this.session.eval(this.predictionTensor, mapping);
+      const evalOutput = this.session.eval(this.predictionTensor, mapping);
       values = evalOutput.getValues();
     });
     return Array2D.new([this.size, this.size], values);
