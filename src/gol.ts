@@ -127,14 +127,11 @@ class GameOfLife {
   }
 
   private generateTrainingData(): void {
-    const batchSize = this.batchSize;
-    const size = this.size;
-
     this.math.scope(() => {
       const inputs = [];
       const outputs = [];
-      for (let i = 0; i < batchSize; i++) {
-        const example = this.generateGolExample(size);
+      for (let i = 0; i < this.batchSize; i++) {
+        const example = this.generateGolExample(this.size);
         inputs.push(example[0].reshape([this.size * this.size]));
         outputs.push(example[1].reshape([this.size * this.size]));
       }
