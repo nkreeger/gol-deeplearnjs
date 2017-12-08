@@ -16,13 +16,13 @@
  */
 
 import {Array2D, Graph, NDArray, NDArrayMathGPU, Session, SGDOptimizer} from 'deeplearn';
+import {InCPUMemoryShuffledInputProviderBuilder} from 'deeplearn/dist/data/input_provider';
 import {Tensor} from 'deeplearn/dist/graph/graph';
+import {CostReduction, FeedEntry} from 'deeplearn/dist/graph/session';
+import {NDArrayMath} from 'deeplearn/dist/math/math';
 import {Scalar} from 'deeplearn/dist/math/ndarray';
-import { NDArrayMath } from 'deeplearn/dist/math/math';
-import { FeedEntry, CostReduction } from 'deeplearn/dist/graph/session';
-import { Server } from 'http';
-import { expectArrayInMeanStdRange } from 'deeplearn/dist/test_util';
-import { InCPUMemoryShuffledInputProviderBuilder } from 'deeplearn/dist/data/input_provider';
+import {expectArrayInMeanStdRange} from 'deeplearn/dist/test_util';
+import {Server} from 'http';
 
 /* Test-only method for logging worlds. */
 function testPrint(array: NDArray, size: number) {
@@ -39,7 +39,8 @@ function testPrint(array: NDArray, size: number) {
 }
 
 /**
- * Main class for running a deep-neural network of training for Game-of-life next sequence.
+ * Main class for running a deep-neural network of training for Game-of-life
+ * next sequence.
  */
 class GameOfLife {
   session: Session;
@@ -73,12 +74,16 @@ class GameOfLife {
     this.inputTensor = graph.placeholder('input', [size]);
     this.targetTensor = graph.placeholder('target', [size]);
 
-    let hiddenLayer = GameOfLife.createFullyConnectedLayer(graph, this.inputTensor, 0, size);
-    hiddenLayer = GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 1, size);
+    let hiddenLayer =
+        GameOfLife.createFullyConnectedLayer(graph, this.inputTensor, 0, size);
+    hiddenLayer =
+        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 1, size);
     // This needs activiation function sigmoid?
-    this.predictionTensor = GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 2, size);
+    this.predictionTensor =
+        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 2, size);
 
-    this.costTensor = graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
+    this.costTensor =
+        graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
     this.session = new Session(graph, this.math);
 
     // Generate the training data:
@@ -94,13 +99,13 @@ class GameOfLife {
     let costValue = -1;
     this.math.scope(() => {
       const cost = this.session.train(
-        this.costTensor, this.feedEntries, this.batchSize, this.optimizer,
-        shouldFetchCost ? CostReduction.MEAN : CostReduction.NONE);
+          this.costTensor, this.feedEntries, this.batchSize, this.optimizer,
+          shouldFetchCost ? CostReduction.MEAN : CostReduction.NONE);
 
-        if (!shouldFetchCost) {
-          return;
-        }
-        costValue = cost.get();
+      if (!shouldFetchCost) {
+        return;
+      }
+      costValue = cost.get();
     });
     return costValue;
   }
@@ -113,7 +118,7 @@ class GameOfLife {
         data: world.reshape([this.size * this.size])
       }]
 
-      const evalOutput = this.session.eval(this.predictionTensor, mapping);
+          const evalOutput = this.session.eval(this.predictionTensor, mapping);
       values = evalOutput.getValues();
     });
     return Array2D.new([this.size, this.size], values);
@@ -133,9 +138,11 @@ class GameOfLife {
       }
 
       // TODO(kreeger): Don't really need to shuffle these.
-      const inputProviderBuilder = new InCPUMemoryShuffledInputProviderBuilder([inputs, outputs]);
-      const [inputProvider, targetProvider] = inputProviderBuilder.getInputProviders();
-     
+      const inputProviderBuilder =
+          new InCPUMemoryShuffledInputProviderBuilder([inputs, outputs]);
+      const [inputProvider, targetProvider] =
+          inputProviderBuilder.getInputProviders();
+
       this.feedEntries = [
         {tensor: this.inputTensor, data: inputProvider},
         {tensor: this.targetTensor, data: targetProvider}
@@ -165,7 +172,7 @@ class GameOfLife {
       nextWorldValues.push(nextVal);
     }
     const worldNext = Array2D.new(world.shape, nextWorldValues, 'int32');
-    return [worldPadded, GameOfLife.padArray(worldNext)]; 
+    return [worldPadded, GameOfLife.padArray(worldNext)];
   }
 
   /** Counts total sum of neighbors for a given world. */
@@ -174,17 +181,23 @@ class GameOfLife {
         this.math.slice2D(worldPadded, [0, 0], [size - 2, size - 2]),
         this.math.slice2D(worldPadded, [0, 1], [size - 2, size - 2]));
     neighborCount = this.math.add(
-        neighborCount, this.math.slice2D(worldPadded, [0, 2], [size - 2, size - 2]));
+        neighborCount,
+        this.math.slice2D(worldPadded, [0, 2], [size - 2, size - 2]));
     neighborCount = this.math.add(
-        neighborCount, this.math.slice2D(worldPadded, [1, 0], [size - 2, size - 2]));
+        neighborCount,
+        this.math.slice2D(worldPadded, [1, 0], [size - 2, size - 2]));
     neighborCount = this.math.add(
-        neighborCount, this.math.slice2D(worldPadded, [1, 2], [size - 2, size - 2]));
+        neighborCount,
+        this.math.slice2D(worldPadded, [1, 2], [size - 2, size - 2]));
     neighborCount = this.math.add(
-        neighborCount, this.math.slice2D(worldPadded, [2, 0], [size - 2, size - 2]));
+        neighborCount,
+        this.math.slice2D(worldPadded, [2, 0], [size - 2, size - 2]));
     neighborCount = this.math.add(
-        neighborCount, this.math.slice2D(worldPadded, [2, 1], [size - 2, size - 2]));
+        neighborCount,
+        this.math.slice2D(worldPadded, [2, 1], [size - 2, size - 2]));
     neighborCount = this.math.add(
-        neighborCount, this.math.slice2D(worldPadded, [2, 2], [size - 2, size - 2]));
+        neighborCount,
+        this.math.slice2D(worldPadded, [2, 2], [size - 2, size - 2]));
     return neighborCount as Array2D;
   }
 
