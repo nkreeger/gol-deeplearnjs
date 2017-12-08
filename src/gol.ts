@@ -328,6 +328,12 @@ function getBoardSize() {
   return parseInt(boardSizeInput.value);
 }
 
+function clearChildNodes(node: Element) {
+  while (node.hasChildNodes()) {
+    node.removeChild(node.lastChild);
+  }
+}
+
 addSequenceButton.addEventListener('click', () => {
   worldContexts.push(new WorldContext(game.generateGolExample(getBoardSize())));
 });
@@ -345,6 +351,9 @@ trainButton.addEventListener('click', () => {
   const numLayers = parseInt(numLayersInput.value);
 
   game.setupSession(boardSize, learningRate, numLayers);
+  requestAnimationFrame(() => {
+
+  });
   for (let i = 0; i < trainingSize; i++) {
     let fetchCost = i % 100 == 0;
     let cost = game.train1Batch(fetchCost);
@@ -369,8 +378,6 @@ predictButton.addEventListener('click', () => {
 
 resetButton.addEventListener('click', () => {
   worldContexts = [];
-  const worldsDisplay = document.querySelector('.worlds-display');
-  while (worldsDisplay.hasChildNodes()) {
-    worldsDisplay.removeChild(worldsDisplay.lastChild);
-  }
+  clearChildNodes(document.querySelector('.worlds-display'));
+  clearChildNodes(document.querySelector('.train-display'));
 });
