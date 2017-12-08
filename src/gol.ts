@@ -23,6 +23,8 @@ import {NDArrayMath} from 'deeplearn/dist/math/math';
 import {Scalar} from 'deeplearn/dist/math/ndarray';
 import {expectArrayInMeanStdRange} from 'deeplearn/dist/test_util';
 import {Server} from 'http';
+import { AdamaxOptimizer } from 'deeplearn/dist/graph/optimizers/adamax_optimizer';
+import { AdagradOptimizer } from 'deeplearn/dist/graph/optimizers/adagrad_optimizer';
 
 /* Test-only method for logging worlds. */
 function testPrint(array: NDArray, size: number) {
@@ -78,10 +80,11 @@ class GameOfLife {
         GameOfLife.createFullyConnectedLayer(graph, this.inputTensor, 0, size);
     hiddenLayer =
         GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 1, size);
-    // This needs activiation function sigmoid?
     this.predictionTensor =
-        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 2, size);
+        GameOfLife.createFullyConnectedLayer(graph, hiddenLayer, 3, size);
+        // GameOfLife.createFullyConnectedLayerSigmoid(graph, hiddenLayer, 2, size);
 
+    // This is wrong - need to use something that is not mean-squared...
     this.costTensor =
         graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
     this.session = new Session(graph, this.math);
@@ -93,9 +96,8 @@ class GameOfLife {
   public train1Batch(shouldFetchCost: boolean): number {
     // Every 42 steps, lower the learning rate by 15%.
     const learningRate =
-        this.initialLearningRate * Math.pow(0.95, Math.floor(this.step++ / 42));
+        this.initialLearningRate * Math.pow(0.85, Math.floor(this.step++ / 42));
     this.optimizer.setLearningRate(learningRate);
-
     let costValue = -1;
     this.math.scope(() => {
       const cost = this.session.train(
@@ -118,7 +120,7 @@ class GameOfLife {
         data: world.reshape([this.size * this.size])
       }]
 
-          const evalOutput = this.session.eval(this.predictionTensor, mapping);
+      const evalOutput = this.session.eval(this.predictionTensor, mapping);
       values = evalOutput.getValues();
     });
     return Array2D.new([this.size, this.size], values);
@@ -239,14 +241,23 @@ class GameOfLife {
         'fully_connected_' + layerIndex, inputLayer, sizeOfThisLayer,
         includeRelu ? (x) => graph.relu(x) : undefined, includeBias);
   }
+
+  /* Helper method for creating a fully connected layer. */
+  private static createFullyConnectedLayerSigmoid(
+      graph: Graph, inputLayer: Tensor, layerIndex: number,
+      sizeOfThisLayer: number, includeBias = true) {
+    return graph.layers.dense(
+        'fully_connected_' + layerIndex, inputLayer, sizeOfThisLayer,
+        (x) => graph.sigmoid(x), includeBias);
+  }
 }
 
 
 const game = new GameOfLife(5);
 const worlds = game.generateGolExample(5);
 game.setupSession();
-for (let i = 0; i < 200; i++) {
-  let fetchCost = i % 5 == 0;
+for (let i = 0; i < 1000; i++) {
+  let fetchCost = i % 300 == 0;
   let cost = game.train1Batch(fetchCost);
   if (fetchCost) {
     console.log(i + ': ' + cost);
