@@ -52,11 +52,11 @@ class GameOfLife {
   feedEntries: FeedEntry[];
 
   constructor() {
-    // this.optimizer = new AdagradOptimizer(0.01);
-    this.optimizer = new SGDOptimizer(this.initialLearningRate);
   }
 
   setupSession(boardSize: number, initialLearningRate: number, numLayers: number): void {
+    this.optimizer = new SGDOptimizer(this.initialLearningRate);
+
     this.size = boardSize;
     const graph = new Graph();
     const shape = this.size * this.size;
@@ -64,13 +64,16 @@ class GameOfLife {
     this.inputTensor = graph.placeholder('input', [shape]);
     this.targetTensor = graph.placeholder('target', [shape]);
 
-    let hiddenLayer: Tensor; 
-    for (let i = 0; i < numLayers; i++) {
+    let hiddenLayer = GameOfLife.createFullyConnectedLayer(
+          graph, this.inputTensor, 0, shape);
+    for (let i = 1; i < numLayers; i++) {
       hiddenLayer = GameOfLife.createFullyConnectedLayer(
-          graph, this.inputTensor, i, shape);
+          graph, hiddenLayer, i, shape);
     }
 
+    console.log('created layers: ', numLayers);
     this.predictionTensor = hiddenLayer;
+    console.log('this.predictionTensor', this.predictionTensor);
 
     this.costTensor =
         graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
