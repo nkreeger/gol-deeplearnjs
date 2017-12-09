@@ -84,7 +84,7 @@ class GameOfLife {
     this.generateTrainingData();
     // Every 42 steps, lower the learning rate by 15%.
     const learningRate =
-        this.initialLearningRate * Math.pow(0.85, Math.floor(this.step++ / 42));
+        this.initialLearningRate * Math.pow(0.85, Math.floor(this.step++ / 100));
     this.optimizer.setLearningRate(learningRate);
     let costValue = -1;
     this.math.scope(() => {
@@ -240,7 +240,7 @@ class WorldDisplay {
     document.querySelector('.worlds-display').appendChild(this.rootElement);
   }
 
-  displayWorld(world: NDArray, title: string) {
+  displayWorld(world: NDArray, title: string): Element {
     let worldElement = document.createElement('div');
     worldElement.setAttribute('class', 'world');
 
@@ -271,6 +271,7 @@ class WorldDisplay {
 
     worldElement.appendChild(boardElement);
     this.rootElement.appendChild(worldElement);
+    return worldElement;
   }
 }
 
@@ -278,6 +279,7 @@ class WorldContext {
   worldDisplay: WorldDisplay;
   world: NDArray;
   worldNext: NDArray;
+  predictionElement: Element = null;
 
   constructor(worlds: [NDArray, NDArray]) {
     this.worldDisplay = new WorldDisplay();
@@ -289,7 +291,10 @@ class WorldContext {
   }
 
   displayPrediction(prediction: NDArray) {
-    this.worldDisplay.displayWorld(prediction, 'Prediction');
+    if (this.predictionElement) {
+      this.predictionElement.remove();
+    }
+    this.predictionElement = this.worldDisplay.displayWorld(prediction, 'Prediction');
   }
 }
 
