@@ -71,9 +71,7 @@ class GameOfLife {
           graph, hiddenLayer, i, shape);
     }
 
-    console.log('created layers: ', numLayers);
     this.predictionTensor = hiddenLayer;
-    console.log('this.predictionTensor', this.predictionTensor);
 
     this.costTensor =
         graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
