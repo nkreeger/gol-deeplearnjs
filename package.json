@@ -7,6 +7,7 @@
     "@types/node": "^8.0.53",
     "deeplearn": "^0.3.13",
     "express": "^4.16.2",
+    "http-server": "^0.10.0",
     "webpack": "^3.8.1"
   },
   "devDependencies": {
@@ -15,6 +16,7 @@
   },
   "scripts": {
     "build": "webpack",
-    "watch": "webpack --watch"
+    "watch": "webpack --watch",
+    "server": "http-server"
   }
 }
