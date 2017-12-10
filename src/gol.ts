@@ -125,42 +125,6 @@ class GameOfLife {
   }
 }
 
-/** TODO(kreeger): Doc me. */
-class TrainingDataCache {
-  BATCH_SIZE = 100;
-  game: GameOfLife;
-  cache: Array<[NDArray, NDArray]>;
-  index: number;
-
-  constructor(game: GameOfLife) {
-    this.game = game;
-    this.cache = [];
-    this.index = 0;
-  }
-
-  nextSequence(): [NDArray, NDArray] {
-    if (this.index == this.cache.length) {
-      this.flush();
-    }
-    if (this.cache.length == 0) {
-      this.primeCache();
-    }
-    return this.cache[this.index++];
-  }
-
-  flush() {
-    this.index = 0;
-    this.cache = [];
-  }
-
-  private primeCache() {
-    for (let i = 0; i < this.BATCH_SIZE; i++) {
-      this.cache.push(game.generateGolExample());
-    }
-  }
-}
-
-
 /**
  * Main class for running a deep-neural network of training for Game-of-life
  * next sequence.
@@ -186,11 +150,11 @@ class GameOfLifeModel {
   // Maps tensors to InputProviders
   feedEntries: FeedEntry[];
 
-  trainingDataCache: TrainingDataCache;
+  game: GameOfLife;
 
   constructor(game: GameOfLife, math: NDArrayMath) {
-    this.trainingDataCache = new TrainingDataCache(game);
     this.math = math;
+    this.game = game;
   }
 
   setupSession(
@@ -198,7 +162,6 @@ class GameOfLifeModel {
     this.optimizer = new SGDOptimizer(this.initialLearningRate);
 
     this.size = boardSize;
-    this.trainingDataCache.flush();
     const graph = new Graph();
     const shape = this.size * this.size;
 
@@ -258,7 +221,7 @@ class GameOfLifeModel {
       const inputs = [];
       const outputs = [];
       for (let i = 0; i < this.batchSize; i++) {
-        const example = this.trainingDataCache.nextSequence();
+        const example = this.game.generateGolExample();
         inputs.push(example[0].reshape([this.size * this.size]));
         outputs.push(example[1].reshape([this.size * this.size]));
       }
@@ -372,7 +335,7 @@ class TrainDisplay {
   }
 
   showStep(step: number, steps: number) {
-    this.element.innerHTML = 'Trained ' + (step / steps * 100) + '%';
+    this.element.innerHTML = 'Trained ' + Math.trunc(step / steps * 100) + '%';
   }
 }
 
@@ -412,24 +375,27 @@ function clearChildNodes(node: Element) {
 }
 
 let step = 0;
+let trainLength = 0;
 function trainAndRender() {
-  if (step == 10000) {
+  if (step == trainLength) {
     trainButton.removeAttribute('disabled');
     predictButton.removeAttribute('disabled');
+    resetButton.removeAttribute('disabled');
     boardSizeInput.removeAttribute('disabled');
     learningRateInput.removeAttribute('disabled');
     trainingSizeInput.removeAttribute('disabled');
+    numLayersInput.removeAttribute('disabled');
     return;
   }
 
   requestAnimationFrame(trainAndRender);
   step++;
 
-  const fetchCost = step % 100 == 0;
+  const fetchCost = step % 10 == 0;
   const cost = model.train1Batch(fetchCost);
 
   if (fetchCost) {
-    trainDisplay.showStep(step, 10000);
+    trainDisplay.showStep(step, trainLength);
   }
 }
 
@@ -441,9 +407,11 @@ addSequenceButton.addEventListener('click', () => {
 trainButton.addEventListener('click', () => {
   trainButton.setAttribute('disabled', 'disabled');
   predictButton.setAttribute('disabled', 'disabled');
+  resetButton.setAttribute('disabled', 'disabled');
   boardSizeInput.setAttribute('disabled', 'disabled');
   learningRateInput.setAttribute('disabled', 'disabled');
   trainingSizeInput.setAttribute('disabled', 'disabled');
+  numLayersInput.setAttribute('disabled', 'disabled');
 
   const boardSize = getBoardSize();
   const learningRate = parseFloat(learningRateInput.value);
@@ -454,6 +422,7 @@ trainButton.addEventListener('click', () => {
   model.setupSession(boardSize, learningRate, numLayers);
 
   step = 0;
+  trainLength = trainingSize;
   trainAndRender();
 });
 
