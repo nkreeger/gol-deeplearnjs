@@ -182,7 +182,7 @@ class GameOfLifeModel {
     this.session = new Session(graph, this.math);
   }
 
-  train1Batch(shouldFetchCost: boolean): number {
+  trainBatch(shouldFetchCost: boolean): number {
     this.generateTrainingData();
     // Every 42 steps, lower the learning rate by 15%.
     const learningRate = this.initialLearningRate *
@@ -392,7 +392,7 @@ function trainAndRender() {
   step++;
 
   const fetchCost = step % 10 == 0;
-  const cost = model.train1Batch(fetchCost);
+  const cost = model.trainBatch(fetchCost);
 
   if (fetchCost) {
     trainDisplay.showStep(step, trainLength);
