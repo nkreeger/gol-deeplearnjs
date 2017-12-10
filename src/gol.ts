@@ -25,120 +25,28 @@ import {NDArrayMath} from 'deeplearn/dist/math/math';
 import {Scalar} from 'deeplearn/dist/math/ndarray';
 import {expectArrayInMeanStdRange} from 'deeplearn/dist/test_util';
 import {Server} from 'http';
+import {setTimeout} from 'timers';
 
-/**
- * Main class for running a deep-neural network of training for Game-of-life
- * next sequence.
- */
+/** TODO(kreeger): Doc me. */
 class GameOfLife {
-  session: Session;
-  math: NDArrayMath = new NDArrayMathGPU();
-  batchSize = 1;
-
-  // An optimizer with a certain initial learning rate. Used for training.
-  initialLearningRate = 0.042;
-  optimizer: SGDOptimizer;
-  // optimizer: AdagradOptimizer;
-
-  inputTensor: Tensor;
-  targetTensor: Tensor;
-  costTensor: Tensor;
-  predictionTensor: Tensor;
-
+  math: NDArrayMath;
   size: number;
-  step = 0;
 
-  // Maps tensors to InputProviders
-  feedEntries: FeedEntry[];
-
-  constructor() {
+  constructor(size: number, math: NDArrayMath) {
+    this.math = math;
+    this.size = size;
   }
 
-  setupSession(boardSize: number, initialLearningRate: number, numLayers: number): void {
-    this.optimizer = new SGDOptimizer(this.initialLearningRate);
-
-    this.size = boardSize;
-    const graph = new Graph();
-    const shape = this.size * this.size;
-
-    this.inputTensor = graph.placeholder('input', [shape]);
-    this.targetTensor = graph.placeholder('target', [shape]);
-
-    let hiddenLayer = GameOfLife.createFullyConnectedLayer(
-          graph, this.inputTensor, 0, shape);
-    for (let i = 1; i < numLayers; i++) {
-      hiddenLayer = GameOfLife.createFullyConnectedLayer(
-          graph, hiddenLayer, i, shape);
-    }
-
-    this.predictionTensor = hiddenLayer;
-
-    this.costTensor =
-        graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
-    this.session = new Session(graph, this.math);
+  setSize(size: number) {
+    this.size = size;
   }
 
-  public train1Batch(shouldFetchCost: boolean): number {
-    this.generateTrainingData();
-    // Every 42 steps, lower the learning rate by 15%.
-    const learningRate =
-        this.initialLearningRate * Math.pow(0.85, Math.floor(this.step++ / 100));
-    this.optimizer.setLearningRate(learningRate);
-    let costValue = -1;
-    this.math.scope(() => {
-      const cost = this.session.train(
-          this.costTensor, this.feedEntries, this.batchSize, this.optimizer,
-          shouldFetchCost ? CostReduction.MEAN : CostReduction.NONE);
-
-      if (!shouldFetchCost) {
-        return;
-      }
-      costValue = cost.get();
-    });
-    return costValue;
-  }
-
-  predict(world: NDArray): Array2D {
-    let values = null;
-    this.math.scope((keep, track) => {
-      const mapping = [{
-        tensor: this.inputTensor,
-        data: world.reshape([this.size * this.size])
-      }]
-
-      const evalOutput = this.session.eval(this.predictionTensor, mapping);
-      values = evalOutput.getValues();
-    });
-    return Array2D.new([this.size, this.size], values);
-  }
-
-  private generateTrainingData(): void {
-    this.math.scope(() => {
-      const inputs = [];
-      const outputs = [];
-      for (let i = 0; i < this.batchSize; i++) {
-        const example = this.generateGolExample(this.size);
-        inputs.push(example[0].reshape([this.size * this.size]));
-        outputs.push(example[1].reshape([this.size * this.size]));
-      }
-
-      // TODO(kreeger): Don't really need to shuffle these.
-      const inputProviderBuilder =
-          new InCPUMemoryShuffledInputProviderBuilder([inputs, outputs]);
-      const [inputProvider, targetProvider] =
-          inputProviderBuilder.getInputProviders();
-
-      this.feedEntries = [
-        {tensor: this.inputTensor, data: inputProvider},
-        {tensor: this.targetTensor, data: targetProvider}
-      ];
-    });
-  }
-
-  public generateGolExample(size: number): [NDArray, NDArray] {
-    const world = Array2D.randUniform([size - 2, size - 2], 0, 2, 'int32');
+  generateGolExample(): [NDArray, NDArray] {
+    const world =
+        Array2D.randUniform([this.size - 2, this.size - 2], 0, 2, 'int32');
     const worldPadded = GameOfLife.padArray(world);
-    const numNeighbors = this.countNeighbors(size, worldPadded).getValues();
+    const numNeighbors =
+        this.countNeighbors(this.size, worldPadded).getValues();
     const worldValues = world.getValues();
     const nextWorldValues = [];
     for (let i = 0; i < numNeighbors.length; i++) {
@@ -215,6 +123,158 @@ class GameOfLife {
     }
     return Array2D.new(shape as [number, number], values, 'int32');
   }
+}
+
+/** TODO(kreeger): Doc me. */
+class TrainingDataCache {
+  BATCH_SIZE = 100;
+  game: GameOfLife;
+  cache: Array<[NDArray, NDArray]>;
+  index: number;
+
+  constructor(game: GameOfLife) {
+    this.game = game;
+    this.cache = [];
+    this.index = 0;
+  }
+
+  nextSequence(): [NDArray, NDArray] {
+    if (this.index == this.cache.length) {
+      this.flush();
+    }
+    if (this.cache.length == 0) {
+      this.primeCache();
+    }
+    return this.cache[this.index++];
+  }
+
+  flush() {
+    this.index = 0;
+    this.cache = [];
+  }
+
+  private primeCache() {
+    for (let i = 0; i < this.BATCH_SIZE; i++) {
+      this.cache.push(game.generateGolExample());
+    }
+  }
+}
+
+
+/**
+ * Main class for running a deep-neural network of training for Game-of-life
+ * next sequence.
+ */
+class GameOfLifeModel {
+  session: Session;
+  math: NDArrayMath;
+  batchSize = 1;
+
+  // An optimizer with a certain initial learning rate. Used for training.
+  initialLearningRate = 0.042;
+  optimizer: SGDOptimizer;
+  // optimizer: AdagradOptimizer;
+
+  inputTensor: Tensor;
+  targetTensor: Tensor;
+  costTensor: Tensor;
+  predictionTensor: Tensor;
+
+  size: number;
+  step = 0;
+
+  // Maps tensors to InputProviders
+  feedEntries: FeedEntry[];
+
+  trainingDataCache: TrainingDataCache;
+
+  constructor(game: GameOfLife, math: NDArrayMath) {
+    this.trainingDataCache = new TrainingDataCache(game);
+    this.math = math;
+  }
+
+  setupSession(
+      boardSize: number, initialLearningRate: number, numLayers: number): void {
+    this.optimizer = new SGDOptimizer(this.initialLearningRate);
+
+    this.size = boardSize;
+    this.trainingDataCache.flush();
+    const graph = new Graph();
+    const shape = this.size * this.size;
+
+    this.inputTensor = graph.placeholder('input', [shape]);
+    this.targetTensor = graph.placeholder('target', [shape]);
+
+    let hiddenLayer = GameOfLifeModel.createFullyConnectedLayer(
+        graph, this.inputTensor, 0, shape);
+    for (let i = 1; i < numLayers; i++) {
+      hiddenLayer = GameOfLifeModel.createFullyConnectedLayer(
+          graph, hiddenLayer, i, shape);
+    }
+
+    this.predictionTensor = hiddenLayer;
+
+    this.costTensor =
+        graph.meanSquaredCost(this.targetTensor, this.predictionTensor);
+    this.session = new Session(graph, this.math);
+  }
+
+  train1Batch(shouldFetchCost: boolean): number {
+    this.generateTrainingData();
+    // Every 42 steps, lower the learning rate by 15%.
+    const learningRate = this.initialLearningRate *
+        Math.pow(0.85, Math.floor(this.step++ / 100));
+    this.optimizer.setLearningRate(learningRate);
+    let costValue = -1;
+    this.math.scope(() => {
+      const cost = this.session.train(
+          this.costTensor, this.feedEntries, this.batchSize, this.optimizer,
+          shouldFetchCost ? CostReduction.MEAN : CostReduction.NONE);
+
+      if (!shouldFetchCost) {
+        return;
+      }
+      costValue = cost.get();
+    });
+    return costValue;
+  }
+
+  predict(world: NDArray): Array2D {
+    let values = null;
+    this.math.scope((keep, track) => {
+      const mapping = [{
+        tensor: this.inputTensor,
+        data: world.reshape([this.size * this.size])
+      }]
+
+          const evalOutput = this.session.eval(this.predictionTensor, mapping);
+      values = evalOutput.getValues();
+    });
+    return Array2D.new([this.size, this.size], values);
+  }
+
+  private generateTrainingData(): void {
+    this.math.scope(() => {
+      const inputs = [];
+      const outputs = [];
+      for (let i = 0; i < this.batchSize; i++) {
+        const example = this.trainingDataCache.nextSequence();
+        inputs.push(example[0].reshape([this.size * this.size]));
+        outputs.push(example[1].reshape([this.size * this.size]));
+      }
+
+      // TODO(kreeger): Don't really need to shuffle these.
+      const inputProviderBuilder =
+          new InCPUMemoryShuffledInputProviderBuilder([inputs, outputs]);
+      const [inputProvider, targetProvider] =
+          inputProviderBuilder.getInputProviders();
+
+      this.feedEntries = [
+        {tensor: this.inputTensor, data: inputProvider},
+        {tensor: this.targetTensor, data: targetProvider}
+      ];
+    });
+  }
 
   /* Helper method for creating a fully connected layer. */
   private static createFullyConnectedLayer(
@@ -234,7 +294,7 @@ class WorldDisplay {
   constructor() {
     this.rootElement = document.createElement('div');
     this.rootElement.setAttribute('class', 'world-display');
-    
+
     document.querySelector('.worlds-display').appendChild(this.rootElement);
   }
 
@@ -263,7 +323,7 @@ class WorldDisplay {
           columnElement.classList.add('dead');
         }
         rowElement.appendChild(columnElement);
-     }
+      }
       boardElement.appendChild(rowElement);
     }
 
@@ -292,7 +352,8 @@ class WorldContext {
     if (this.predictionElement) {
       this.predictionElement.remove();
     }
-    this.predictionElement = this.worldDisplay.displayWorld(prediction, 'Prediction');
+    this.predictionElement =
+        this.worldDisplay.displayWorld(prediction, 'Prediction');
   }
 }
 
@@ -309,10 +370,16 @@ class TrainDisplay {
     costElement.innerText = '* Cost: ' + cost;
     this.element.appendChild(costElement);
   }
+
+  showStep(step: number, steps: number) {
+    this.element.innerHTML = 'Trained ' + (step / steps * 100) + '%';
+  }
 }
 
 // Setup game
-const game = new GameOfLife();
+const math = new NDArrayMathGPU();
+const game = new GameOfLife(5, math);
+const model = new GameOfLifeModel(game, math);
 
 // Helper classes for displaying worlds and training data:
 const trainDisplay = new TrainDisplay();
@@ -321,10 +388,14 @@ const worldDisplay = new WorldDisplay();
 // List of worlds + display contexts.
 let worldContexts: Array<WorldContext> = [];
 
-const boardSizeInput = document.getElementById('board-size-input') as HTMLTextAreaElement;
-const trainingSizeInput = document.getElementById('training-size-input') as HTMLTextAreaElement;
-const learningRateInput = document.getElementById('learning-rate-input') as HTMLTextAreaElement;
-const numLayersInput = document.getElementById('num-layers-input') as HTMLTextAreaElement;
+const boardSizeInput =
+    document.getElementById('board-size-input') as HTMLTextAreaElement;
+const trainingSizeInput =
+    document.getElementById('training-size-input') as HTMLTextAreaElement;
+const learningRateInput =
+    document.getElementById('learning-rate-input') as HTMLTextAreaElement;
+const numLayersInput =
+    document.getElementById('num-layers-input') as HTMLTextAreaElement;
 const addSequenceButton = document.querySelector('.add-sequence-button');
 const trainButton = document.querySelector('.train-button');
 const predictButton = document.querySelector('.predict-button');
@@ -340,8 +411,31 @@ function clearChildNodes(node: Element) {
   }
 }
 
+let step = 0;
+function trainAndRender() {
+  if (step == 10000) {
+    trainButton.removeAttribute('disabled');
+    predictButton.removeAttribute('disabled');
+    boardSizeInput.removeAttribute('disabled');
+    learningRateInput.removeAttribute('disabled');
+    trainingSizeInput.removeAttribute('disabled');
+    return;
+  }
+
+  requestAnimationFrame(trainAndRender);
+  step++;
+
+  const fetchCost = step % 100 == 0;
+  const cost = model.train1Batch(fetchCost);
+
+  if (fetchCost) {
+    trainDisplay.showStep(step, 10000);
+  }
+}
+
 addSequenceButton.addEventListener('click', () => {
-  worldContexts.push(new WorldContext(game.generateGolExample(getBoardSize())));
+  game.setSize(getBoardSize());
+  worldContexts.push(new WorldContext(game.generateGolExample()));
 });
 
 trainButton.addEventListener('click', () => {
@@ -356,29 +450,16 @@ trainButton.addEventListener('click', () => {
   const trainingSize = parseInt(trainingSizeInput.value);
   const numLayers = parseInt(numLayersInput.value);
 
-  game.setupSession(boardSize, learningRate, numLayers);
-  requestAnimationFrame(() => {
+  game.setSize(boardSize);
+  model.setupSession(boardSize, learningRate, numLayers);
 
-  });
-  for (let i = 0; i < trainingSize; i++) {
-    let fetchCost = i % 100 == 0;
-    let cost = game.train1Batch(fetchCost);
-    if (fetchCost) {
-      trainDisplay.logCost(cost);
-      console.log(i + ': ' + cost);
-    }
-  }
-
-  trainButton.removeAttribute('disabled');
-  predictButton.removeAttribute('disabled');
-  boardSizeInput.removeAttribute('disabled');
-  learningRateInput.removeAttribute('disabled');
-  trainingSizeInput.removeAttribute('disabled');
+  step = 0;
+  trainAndRender();
 });
 
 predictButton.addEventListener('click', () => {
   worldContexts.forEach((worldContext) => {
-    worldContext.displayPrediction(game.predict(worldContext.world));
+    worldContext.displayPrediction(model.predict(worldContext.world));
   });
 });
 
